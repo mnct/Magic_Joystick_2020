@@ -220,9 +220,12 @@ This class will display a feedback of the joy position
 """
 class display():
 
-    def __init__(self):
+    DISPLAY_FREQUENCY = 0.5
+
+    def __init__(self, joy):
         self.x_previous = 0
         self.y_previous = 0
+        self.joy = joy
 
         self.disp = Adafruit_SSD1306.SSD1306_128_64(rst=0)
 
@@ -247,7 +250,26 @@ class display():
         # Draw vertical axes
         self.draw.line((64, 0, 64, 64), fill=255)
      
-            
+
+    def start_daemon(self):
+        logger.debug("Starting screen daemon")
+        daemon = threading.Thread(target=self.screen_daemon, daemon=True)
+        daemon.start()
+        return daemon
+
+
+    """
+    Endless loop that sends periodically Rnet frames
+    """
+    def screen_daemon(self):
+        logger.debug("screen daemon started")
+        # Display joy location on the screen;
+        while True:
+            _, _, scr_x, scr_y,  = self.joy.get_new_data()
+            self.displayPoint(scr_x, scr_y)
+            time.sleep(self.DISPLAY_FREQUENCY)
+
+
     def deletePoint(self):
 
         self.draw.ellipse((self.x_previous-5, self.y_previous-5 , self.x_previous+5, self.y_previous+5), outline=0, fill=0)
@@ -276,20 +298,24 @@ On disconnection, the server will automatically set X/Y to [0,0]
 """
 class client():
 
-    def __init__(self, ip, port, joy, display):
+    def __init__(self, ip, port):
         self.ip = ip
         self.port =port
         self.joy = joy
         self.display = display
         self.sleeptime = self.joy.sleeptime
+        self.server_nopresent = True
 
-        try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            server_address = (self.ip, self.port)
-            self.sock.connect(server_address)
-        except:
-            logger.error("connecting to %s:%d failed" %(self.ip, self.port))
-            sys.exit(1)
+        while(self.server_nopresent)
+            try:
+                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                server_address = (self.ip, self.port)
+                self.sock.connect(server_address)
+                self.server_nopresent = False
+            except:
+                logger.error("connecting to %s:%d failed" %(self.ip, self.port))
+                time.sleep(2)
+
 
 
     def start(self):         
@@ -297,13 +323,10 @@ class client():
         while True:
             # get x/y
             # 'xx.yy'  where xx and yy are unsigned integer on 8 bits [0..255]
-            rnet_x, rnet_y, scr_x, scr_y = self.joy.get_new_data()
+            rnet_x, rnet_y, _, _ = self.joy.get_new_data()
             rnet_data = b'%d.%d' %(rnet_x,rnet_y)
             logger.debug("Get new RNET x/y data: %r" %rnet_data)
             self.sock.send(rnet_data)
-
-            # Display joy location on the screen;
-            self.display.displayPoint(scr_x, scr_y)
 
             time.sleep(self.sleeptime)
         
@@ -340,10 +363,11 @@ if __name__ == "__main__":
     joy = joystick(args.period, args.invert_x, args.invert_y, args.swap_xy, args.test)
 
     # Instanciate display
-    display = display()
+    display = display(joy)
+    display.start_daemon()
 
     # create client and connect to Rnet server
-    cli = client(args.ip, args.port, joy, display)
+    cli = client(args.ip, args.port)
     cli.start()
 
 
