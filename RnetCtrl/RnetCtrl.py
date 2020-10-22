@@ -30,9 +30,7 @@ class RnetControl(threading.Thread):
 
     # Constants :
     FRAME_JSM_INDUCE_ERROR = '0c000000#'
-    # POSITION_FREQUENCY = 0.01   # 100Hz
-    POSITION_FREQUENCY = 0.5   # 100Hz
-
+    POSITION_FREQUENCY = 0.01   # 100Hz
 
     def __init__(self, jsm_address, testmode = False):
         self.joy_x = 0
