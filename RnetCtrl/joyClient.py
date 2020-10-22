@@ -179,6 +179,10 @@ class joystick():
             # Scale ADC range for oled screen
             scr_x = self.screen_scale(x - self.offset_x, 0, 2048, 0, 128)
             scr_y = self.screen_scale(y - self.offset_y, 0, 2048, 0, 64)
+            if self.invert_x:
+                scr_x = common.unsigned2signed(scr_x, self.invert_x)
+            if self.invert_y:
+                scr_y = common.unsigned2signed(scr_y, self.invert_y)
 
             # Convert unsigned scaled value to signed value, and possibly
             # invert sign if required
@@ -220,7 +224,7 @@ This class will display a feedback of the joy position
 """
 class display():
 
-    DISPLAY_FREQUENCY = 0.5
+    DISPLAY_FREQUENCY = 0.1
 
     def __init__(self, joy):
         self.x_previous = 0
@@ -245,6 +249,8 @@ class display():
         # Get drawing object to draw on image.
         self.draw = ImageDraw.Draw(self.image)
 
+    def displayAxes(self):
+        
         # Draw horizontal axes.
         self.draw.line((0, 32, 128, 32), fill=255)
         # Draw vertical axes
@@ -278,6 +284,7 @@ class display():
     def displayPoint(self, x, y):
     
         self.deletePoint()
+        self.displayAxes()
         self.draw.ellipse((x-5, y-5 , x+5, y+5), outline=255, fill=255)
         
         self.x_previous = x
